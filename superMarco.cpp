@@ -28,7 +28,7 @@ class Marco {
 
 
     struct tile {
-        char symbol;
+        char symbol = '.';
         bool discovered = false;
         char move = 'X'; //Where we moved from i.e north/south/east/west or floor#
     };
@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
     myMarco.readMap();
 
     myMarco.search();
+
+    myMarco.output();
 
  
     return 0;
@@ -155,7 +157,7 @@ void Marco::readMap() {
                         else if (symbol == 'C') {
                             countess = coordinate(room, row, col);
                         }
-                   //ERROR CHECK HERE: INVALID SYMBOLS//
+                   //TODO: ERROR CHECK HERE: INVALID SYMBOLS//
                 }
             }
         }
@@ -163,9 +165,9 @@ void Marco::readMap() {
 
     else {
         //Reading List Mode
-        uint32_t room = 32;
-        uint32_t row = 32;
-        uint32_t col = 32;
+        uint32_t room = 0;
+        uint32_t row = 0;
+        uint32_t col = 0;
         char trash = 'e'; 
 
         while (cin >> symbol) {
@@ -214,6 +216,7 @@ void Marco::search() {
     current = start;
 
     sc.push_back(current);
+    ++discovered;
 
     map[current.room][current.row][current.col].discovered = true;
     
@@ -230,59 +233,67 @@ void Marco::search() {
         char currSym = map[current.room][current.row][current.col].symbol;
      
         if ((currSym >= '0') && (currSym <= '9')) {
-            if (isValidChar(map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].symbol)) {
+            if (static_cast<uint32_t>(currSym - '0') < numRooms) {
+                if (isValidChar(map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].symbol)) {
 
-                coordinate newCor(static_cast<uint32_t>(currSym - '0'), current.row, current.col);
-                sc.push_back(newCor);
+                    coordinate newCor(static_cast<uint32_t>(currSym - '0'), current.row, current.col);
+                    sc.push_back(newCor);
+                    ++discovered;
 
-                map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].discovered = true;
-                map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].move = currSym;
+                    map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].discovered = true;
+                    map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].move = static_cast<char>(current.room + '0');
+                }
             }
         }//Investigate Pipe
 
         else {
-            if (!found) {
-                if (current.row > 0) {
+                if (current.row > 0 && !found) {
                     if (!map[current.room][current.row - 1][current.col].discovered && 
-                                                                                isValidChar(map[current.room][current.row - 1][current.col].symbol)) {
+                        isValidChar(map[current.room][current.row - 1][current.col].symbol)) {
                         coordinate newCor(current.room, current.row - 1, current.col);
                         sc.push_back(newCor);
+                        ++discovered;
 
                         map[current.room][current.row - 1][current.col].discovered = true;
                         map[current.room][current.row - 1][current.col].move = 'n';
                     }
                 } //Investigate North
 
-                if (current.col < length - 1) {
-                    if (!map[current.room][current.row][current.col + 1].discovered && isValidChar(map[current.room][current.row][current.col + 1].symbol)) {
+                if (current.col < length - 1 && !found) {
+                    if (!map[current.room][current.row][current.col + 1].discovered && 
+                            isValidChar(map[current.room][current.row][current.col + 1].symbol)) {
                         coordinate newCor(current.room, current.row, current.col + 1);
                         sc.push_back(newCor);
+                        ++discovered;
 
                         map[current.room][current.row][current.col + 1].discovered = true;
                         map[current.room][current.row][current.col + 1].move = 'e';
                     }
                 } //Investigate East
 
-                if (current.row < length - 1) {
-                    if (!map[current.room][current.row + 1][current.col].discovered && isValidChar(map[current.room][current.row + 1][current.col].symbol)) {
+                if (current.row < length - 1 && !found) {
+                    if (!map[current.room][current.row + 1][current.col].discovered && 
+                            isValidChar(map[current.room][current.row + 1][current.col].symbol)) {
                         coordinate newCor(current.room, current.row + 1, current.col);
                         sc.push_back(newCor);
+                        ++discovered;
 
                         map[current.room][current.row + 1][current.col].discovered = true;
                         map[current.room][current.row + 1][current.col].move = 's';
                     }
                 } //Investigate South
 
-                if (current.col > 0) {
-                    if (!map[current.room][current.row][current.col - 1].discovered && isValidChar(map[current.room][current.row][current.col - 1].symbol)) {
-                        coordinate newCor(current.room, current.row, current.col + 1);
+                if (current.col > 0 && !found) {
+                    if (!map[current.room][current.row][current.col - 1].discovered && 
+                            isValidChar(map[current.room][current.row][current.col - 1].symbol)) {
+                        coordinate newCor(current.room, current.row, current.col - 1);
                         sc.push_back(newCor);
+                        ++discovered;
 
                         map[current.room][current.row][current.col - 1].discovered = true;
                         map[current.room][current.row][current.col - 1].move = 'w';
                     }
                 }//Investigate West
-            }
         }
     }
 }
@@ -330,9 +341,13 @@ void Marco::output() {
 
         if (clMode) {
             cout << "Path taken:\n";
-            while (!path.empty()) {
-                char pathSymbol = map[path.back().room][path.back().row][path.back().col].symbol;
-                cout << "(" << path.back().room << "," << path.back().row << "," << path.back().col;
+            while (path.size() > 1) {
+
+                cout << "(" << path.back().room << "," << path.back().row << "," << path.back().col << ",";
+
+                path.pop_back();
+                char pathSymbol = map[path.back().room][path.back().row][path.back().col].move;
+
                 if ((pathSymbol >= '0') && (pathSymbol <= '9')) {
                     cout << "p";
                 }
@@ -341,6 +356,30 @@ void Marco::output() {
                 }
 
                 cout << ")\n";
+            }
+        }
+        else {
+            while (path.size() > 1) {
+                coordinate current(path.back().room, path.back().row, path.back().col);
+                path.pop_back();
+                char symbol = map[path.back().room][path.back().row][path.back().col].move;
+                if ((symbol >= '0') && (symbol <= '9')) {
+                    map[current.room][current.row][current.col].symbol = 'p';
+                }
+                else {
+                    map[current.room][current.row][current.col].symbol = symbol;
+                }
+            }
+            cout << "Start in room " << start.room << ", row " << start.row << ", column " << start.col << "\n";
+
+            for (uint32_t room = 0; room < numRooms; room++) {
+                cout << "//castle room " << room << "\n";
+                for (uint32_t row = 0; row < length; row++) {
+                    for (uint32_t col = 0; col < length; col++) {
+                        cout << map[room][row][col].symbol;
+                    } 
+                    cout << "\n";  
+                }
             }
         }
     }
