@@ -16,31 +16,55 @@ class Marco {
     bool queueMode = false;
 
     //Output Formats
-    bool mapMode = false;
+    bool mapMode = true;
     bool clMode = false; //coordinate list
 
-    /*
-    -Need to store start/countess location -- best way to store location??
-    -Tile constructor?
-    */
+    bool found = false;
+    int discovered = 0;
+
+
 
     public: 
+
 
     struct tile {
         char symbol;
         bool discovered = false;
-        char prev = 'X'; //Where we moved from i.e north/south/east/west or floor#
+        char move = 'X'; //Where we moved from i.e north/south/east/west or floor#
     };
 
     vector<vector<vector<tile>>> map;
+    
 
     char inputMode; 
     uint32_t numRooms = 0;
     uint32_t length = 0;
 
+
+    struct coordinate {
+        uint32_t room;
+        uint32_t row;
+        uint32_t col; 
+
+        coordinate() {}
+
+        coordinate(uint32_t room_in, uint32_t  row_in, uint32_t col_in) :
+            room(room_in), row(row_in), col(col_in) {}
+    };
+
+    coordinate start;
+    coordinate countess;
+
+    deque<coordinate> sc; 
+    deque<coordinate> path;
+    
     void getOptions(int argc, char** argv);
     void readMap();
-    void search(); 
+    void search();
+    void backTrace();
+    void output();
+
+    bool isValidChar(char symb); 
 };
 
 int main(int argc, char **argv) {
@@ -52,8 +76,12 @@ int main(int argc, char **argv) {
 
     myMarco.readMap();
 
+    myMarco.search();
+
+ 
     return 0;
 }
+
 
 void Marco::getOptions(int argc, char** argv) {
     int option_index = 0, option = 0;
@@ -71,7 +99,7 @@ void Marco::getOptions(int argc, char** argv) {
         switch (option) {
 
             case 'h':
-                std::cout << "<Insert helpful message here>\n";
+                std::cout << "<Insert helpful message here>" << endl;
                 exit(0);
 
             case 'q':
@@ -87,6 +115,7 @@ void Marco::getOptions(int argc, char** argv) {
                      mapMode = true;
                 } else if (*optarg == 'L'){
                     clMode = true; 
+                    mapMode = false;
                 } 
             break;
         }
@@ -113,11 +142,20 @@ void Marco::readMap() {
         for (uint32_t room = 0; room < numRooms; room++) {
             for (uint32_t row = 0; row < length; row++) {
                 for (uint32_t col = 0; col < length; col++) {
+                    cin >> symbol;
                     while (symbol == '/') {
                         getline(cin, junk);
                         cin >> symbol;
                     }
-                        map[room][row][col].symbol;
+                        map[room][row][col].symbol = symbol;
+
+                        if (symbol == 'S') {
+                            start = coordinate(room, row, col);
+                        }
+                        else if (symbol == 'C') {
+                            countess = coordinate(room, row, col);
+                        }
+                   //ERROR CHECK HERE: INVALID SYMBOLS//
                 }
             }
         }
@@ -125,21 +163,185 @@ void Marco::readMap() {
 
     else {
         //Reading List Mode
-        uint32_t room = 0;
-        uint32_t row = 0;
-        uint32_t col = 0;
-        char trash;
+        uint32_t room = 32;
+        uint32_t row = 32;
+        uint32_t col = 32;
+        char trash = 'e'; 
 
         while (cin >> symbol) {
             if (symbol == '/') {
                 getline(cin, junk);
-                cin >> symbol;
             }
             else {
-                cin >> trash >> room >> trash >> row 
-                >> trash >> col >> trash >> symbol >> trash;
+
+                cin >> room >> trash >> row >> trash >> col >> trash >> symbol >> trash;
+
+                map[room][row][col].symbol = symbol;
+
+                if (symbol == 'S') {
+                    start = coordinate(room, row, col);
+                }
+                if (symbol == 'C') {
+                    countess = coordinate(room, row, col);
+                }
             }
         }
     }
 }
 
+bool Marco::isValidChar(char symb) {
+    if ((symb >= '0') && (symb <= '9')) {
+        return true;
+    }
+    else if (symb == '.') {
+        return true;
+    }
+    else if (symb == 'C') {
+        found = true;
+        return true;
+    }
+    else if (symb == '#' || symb == '!') {
+        return false;
+    }
+    else {
+        //TODO: REPORT ERROR !!!!!!!!// maybe even report and exit here
+        return false;
+    }
+}
+
+void Marco::search() {
+    coordinate current;
+    current = start;
+
+    sc.push_back(current);
+
+    map[current.room][current.row][current.col].discovered = true;
+    
+    while (!sc.empty() && !found) {
+        if (stackMode) {
+            current = sc.back();
+            sc.pop_back();
+        }
+        else {
+            current = sc.front();
+            sc.pop_front();
+        }
+
+        char currSym = map[current.room][current.row][current.col].symbol;
+     
+        if ((currSym >= '0') && (currSym <= '9')) {
+            if (isValidChar(map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].symbol)) {
+
+                coordinate newCor(static_cast<uint32_t>(currSym - '0'), current.row, current.col);
+                sc.push_back(newCor);
+
+                map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].discovered = true;
+                map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].move = currSym;
+            }
+        }//Investigate Pipe
+
+        else {
+            if (!found) {
+                if (current.row > 0) {
+                    if (!map[current.room][current.row - 1][current.col].discovered && 
+                                                                                isValidChar(map[current.room][current.row - 1][current.col].symbol)) {
+                        coordinate newCor(current.room, current.row - 1, current.col);
+                        sc.push_back(newCor);
+
+                        map[current.room][current.row - 1][current.col].discovered = true;
+                        map[current.room][current.row - 1][current.col].move = 'n';
+                    }
+                } //Investigate North
+
+                if (current.col < length - 1) {
+                    if (!map[current.room][current.row][current.col + 1].discovered && isValidChar(map[current.room][current.row][current.col + 1].symbol)) {
+                        coordinate newCor(current.room, current.row, current.col + 1);
+                        sc.push_back(newCor);
+
+                        map[current.room][current.row][current.col + 1].discovered = true;
+                        map[current.room][current.row][current.col + 1].move = 'e';
+                    }
+                } //Investigate East
+
+                if (current.row < length - 1) {
+                    if (!map[current.room][current.row + 1][current.col].discovered && isValidChar(map[current.room][current.row + 1][current.col].symbol)) {
+                        coordinate newCor(current.room, current.row + 1, current.col);
+                        sc.push_back(newCor);
+
+                        map[current.room][current.row + 1][current.col].discovered = true;
+                        map[current.room][current.row + 1][current.col].move = 's';
+                    }
+                } //Investigate South
+
+                if (current.col > 0) {
+                    if (!map[current.room][current.row][current.col - 1].discovered && isValidChar(map[current.room][current.row][current.col - 1].symbol)) {
+                        coordinate newCor(current.room, current.row, current.col + 1);
+                        sc.push_back(newCor);
+
+                        map[current.room][current.row][current.col - 1].discovered = true;
+                        map[current.room][current.row][current.col - 1].move = 'w';
+                    }
+                }//Investigate West
+            }
+        }
+    }
+}
+
+void Marco::backTrace() {
+    coordinate current;
+    current = countess;
+    path.push_back(current);
+
+    char currMove = map[current.room][current.row][current.col].move;
+    while (currMove != 'X') {
+        if ((currMove >= '0') && (currMove <= '9')) {
+            coordinate newCor(static_cast<uint32_t>(currMove - '0'), current.row, current.col);
+            path.push_back(newCor);
+        }
+        else if (currMove == 'n') {
+            coordinate newCor(current.room, current.row + 1, current.col);
+            path.push_back(newCor);
+        }
+        else if (currMove == 'e') {
+            coordinate newCor(current.room, current.row, current.col - 1);
+            path.push_back(newCor);
+        }
+        else if (currMove == 's') {
+            coordinate newCor(current.room, current.row - 1, current.col);
+            path.push_back(newCor);
+        }
+        else if (currMove == 'w') {
+            coordinate newCor(current.room, current.row, current.col + 1);
+            path.push_back(newCor);
+        }
+
+        current = path.back();
+        currMove = map[current.room][current.row][current.col].move;
+    }
+}
+
+void Marco::output() {
+    if (!found) {
+        cout << "No solution, " << discovered << " tiles discovered." << endl;
+        return; 
+    }
+    else {
+        backTrace(); 
+
+        if (clMode) {
+            cout << "Path taken:\n";
+            while (!path.empty()) {
+                char pathSymbol = map[path.back().room][path.back().row][path.back().col].symbol;
+                cout << "(" << path.back().room << "," << path.back().row << "," << path.back().col;
+                if ((pathSymbol >= '0') && (pathSymbol <= '9')) {
+                    cout << "p";
+                }
+                else {
+                    cout << pathSymbol; 
+                }
+
+                cout << ")\n";
+            }
+        }
+    }
+}
