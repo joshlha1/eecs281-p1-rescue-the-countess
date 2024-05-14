@@ -1,0 +1,13 @@
+M
+3
+2
+//Portal Tester
+//castle room 0
+S1
+5!
+//castle room 1
+22
+##
+//castle room 2
+!C
+!!

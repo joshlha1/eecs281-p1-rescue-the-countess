@@ -233,7 +233,9 @@ void Marco::search() {
         char currSym = map[current.room][current.row][current.col].symbol;
      
         if ((currSym >= '0') && (currSym <= '9')) {
-            if (static_cast<uint32_t>(currSym - '0') < numRooms) {
+            if (static_cast<uint32_t>(currSym - '0') < numRooms && static_cast<uint32_t>(currSym - '0') != current.room
+                && !map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].discovered) {
+
                 if (isValidChar(map[static_cast<uint32_t>(currSym - '0')][current.row][current.col].symbol)) {
 
                     coordinate newCor(static_cast<uint32_t>(currSym - '0'), current.row, current.col);
@@ -266,6 +268,7 @@ void Marco::search() {
                         sc.push_back(newCor);
                         ++discovered;
 
+
                         map[current.room][current.row][current.col + 1].discovered = true;
                         map[current.room][current.row][current.col + 1].move = 'e';
                     }
@@ -277,6 +280,7 @@ void Marco::search() {
                         coordinate newCor(current.room, current.row + 1, current.col);
                         sc.push_back(newCor);
                         ++discovered;
+
 
                         map[current.room][current.row + 1][current.col].discovered = true;
                         map[current.room][current.row + 1][current.col].move = 's';

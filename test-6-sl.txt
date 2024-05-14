@@ -1,0 +1,13 @@
+M
+3
+2
+//Looping Portals yuck
+//castle room 0
+S!
+.2
+//castle room 1
+!2
+!!
+//castle room 2
+!0
+C.
