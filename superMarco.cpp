@@ -84,12 +84,12 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-
 void Marco::getOptions(int argc, char** argv) {
     int option_index = 0, option = 0;
 
     // Don't display getopt error messages about options
     opterr = false;
+    int count = 0;
 
     struct option longOpts[] = {{ "help", no_argument, nullptr, 'h' },
                                 {"queue", no_argument, nullptr, 'q'},
@@ -106,10 +106,12 @@ void Marco::getOptions(int argc, char** argv) {
 
             case 'q':
                 queueMode = true;
+                count++;
                 break;
             
             case 's':
                 stackMode = true;
+                count++;
                 break;
 
             case 'o':    
@@ -122,7 +124,7 @@ void Marco::getOptions(int argc, char** argv) {
             break;
         }
     } 
-    if (stackMode && queueMode) {
+    if (count > 1) {
         cerr << "Stack or queue can only be specified once" << endl; 
         exit(1);
     }
@@ -157,7 +159,13 @@ void Marco::readMap() {
                         else if (symbol == 'C') {
                             countess = coordinate(room, row, col);
                         }
-                   //TODO: ERROR CHECK HERE: INVALID SYMBOLS//
+                        else if (symbol == '#' || symbol == '!'){ //Bad idea perhaps?
+                            map[room][row][col].discovered = true;
+                        }
+                        else if (symbol != '.' && !((symbol >= '0') && (symbol <= '9'))) {
+                            cerr << "Unknown map character" << endl;
+                            exit(1);
+                        }
                 }
             }
         }
@@ -178,13 +186,33 @@ void Marco::readMap() {
 
                 cin >> room >> trash >> row >> trash >> col >> trash >> symbol >> trash;
 
+                if (room >= numRooms || room > 9) {
+                    cerr << "Invalid room number" << endl;
+                    exit(1);
+                }
+                if (row >= length) {
+                    cerr << "Invalid row number" << endl;
+                    exit(1);
+                }
+                if (col >= length) {
+                    cerr << "Invalid column number" << endl;
+                    exit(1);
+                }
+
                 map[room][row][col].symbol = symbol;
 
                 if (symbol == 'S') {
                     start = coordinate(room, row, col);
                 }
-                if (symbol == 'C') {
+                else if (symbol == 'C') {
                     countess = coordinate(room, row, col);
+                }
+                else if (symbol == '#' || symbol == '!'){ //Bad idea perhaps?
+                    map[room][row][col].discovered = true;
+                }
+                else if (symbol != '.' && !((symbol >= '0') && (symbol <= '9'))) {
+                    cerr << "Unknown map character" << endl;
+                    exit(1);
                 }
             }
         }
